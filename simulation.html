@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lexical Analyzer — Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --border: #1f2937;
+      --accent: #38bdf8; --accent2: #22d3ee; --text: #e5e7eb; --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(34,211,238,0.08), transparent 30%),
+        radial-gradient(circle at 85% 5%, rgba(56,189,248,0.07), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh; padding: 28px 16px 40px;
+    }
+    .page { max-width: 1150px; margin: 0 auto; }
+    header { text-align:center; margin-bottom:20px; }
+    .pill { display:inline-flex; gap:8px; padding:7px 14px; border-radius:999px;
+            background: linear-gradient(90deg, rgba(34,211,238,.12), rgba(56,189,248,.08));
+            color:var(--accent); font-weight:700; font-size:13px; border:1px solid rgba(56,189,248,.22);}
+    h1 { margin:10px 0 6px; font-size:28px; }
+    .sub { color:var(--muted); font-size:14px; }
+
+    .grid { display:grid; grid-template-columns:1fr; gap:18px; }
+    @media(min-width:860px){ .grid { grid-template-columns: 1.1fr .9fr; } }
+
+    .card { background: linear-gradient(160deg, rgba(255,255,255,.025), rgba(255,255,255,0)),
+            var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; }
+    .card-title { font-size:13px; color:var(--accent); font-weight:700; margin-bottom:12px; }
+
+    textarea {
+      width:100%; min-height:260px; padding:12px; border-radius:10px; border:1px solid var(--border);
+      background:#080f1e; color:#e2e8f0; font-family: "JetBrains Mono", monospace; font-size:13px;
+      resize: vertical; outline:none;
+    }
+    textarea:focus { box-shadow:0 0 0 3px rgba(56,189,248,.12); border-color:rgba(56,189,248,.7); }
+
+    .controls { display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+    .btn {
+      background: linear-gradient(135deg,var(--accent),var(--accent2)); color:#071524; border: none;
+      border-radius:10px; padding:10px 18px; font-weight:700; cursor:pointer;
+      box-shadow:0 8px 20px rgba(56,189,248,.25);
+    }
+    .btn-clear { background:transparent; border:1px solid var(--border); color:var(--muted);
+                 border-radius:10px; padding:10px 14px; cursor:pointer; }
+    .status { color:var(--muted); font-size:13px; }
+
+    .summary { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .badge { padding:5px 10px; border-radius:999px; font-weight:700; font-size:12px; }
+    .badge.KEYWORD { color:#fbbf24; background:rgba(251,191,36,.08); }
+    .badge.IDENTIFIER { color:#38bdf8; background:rgba(56,189,248,.08); }
+    .badge.INTEGER,.badge.FLOAT { color:#6ee7b7; background:rgba(167,243,208,.06); }
+    .badge.STRING { color:#fb923c; background:rgba(251,146,0,.06); }
+    .badge.OPERATOR { color:#a5b4fc; background:rgba(199,210,254,.06); }
+    .badge.DELIMITER { color:#f472b6; background:rgba(244,114,182,.06); }
+    .badge.COMMENT { color:#94a3b8; background:rgba(148,163,184,.06); }
+    .badge.UNKNOWN { color:#f87171; background:rgba(239,68,68,.06); }
+
+    .table-wrap { max-height:420px; overflow:auto; border-radius:10px; border:1px solid var(--border); }
+    table { width:100%; border-collapse:collapse; }
+    thead { position:sticky; top:0; background:#071427; z-index:1; }
+    th, td { padding:9px 12px; font-size:13px; text-align:left; border-bottom:1px solid var(--border); }
+    th { color:var(--muted); text-transform:uppercase; font-weight:700; letter-spacing:.6px; }
+    td.val { font-family: "JetBrains Mono", monospace; color:#cbd5e1; }
+    .empty { text-align:center; color:var(--muted); padding:40px 12px; font-size:14px; }
+
+    footer { margin-top:18px; padding-top:12px; border-top:1px solid var(--border);
+             display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="pill">⚙ Lexical Analyzer</div>
+      <h1>Lexical Analysis — Simulation</h1>
+      <p class="sub">Browser-only lexer. Paste code and click Tokenize.</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">Source Code</div>
+        <textarea id="code" spellcheck="false">#include &lt;stdio.h&gt;
+
+// Example
+int main() {
+  int x = 10;
+  float pi = 3.14;
+  char *msg = "Hello, World!";
+  if (x >= 5 && pi != 0) {
+    printf("%s\n", msg);
+    x++;
+  }
+  /* Multi-line
+     comment */
+  return 0;
+}</textarea>
+
+        <div class="controls">
+          <button class="btn" id="run">Tokenize</button>
+          <button class="btn-clear" id="clear">Clear</button>
+          <span class="status" id="status">Ready</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tokens</div>
+        <div class="summary" id="summary"></div>
+        <div class="table-wrap">
+          <table id="tokens">
+            <thead><tr><th>#</th><th>Type</th><th>Value</th><th>Ln</th><th>Col</th></tr></thead>
+            <tbody id="tbody"><tr><td colspan="5" class="empty">Click <strong>Tokenize</strong> to analyze code.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>Name: <strong>Chandresh G U</strong></div>
+      <div>Registration Number: <strong>RA2311003050021</strong></div>
+    </footer>
+  </div>
+
+<script>
+// Browser lexer (same logic as your Python lexer, translated to JS)
+const KEYWORDS = new Set(["auto","break","case","char","const","continue","default","do","double","else","enum","extern","float","for","goto","if","int","long","register","return","short","signed","sizeof","static","struct","switch","typedef","union","unsigned","void","volatile","while","print","input","def","class","import","from","as","try","except","finally","raise","with","yield","lambda","pass","True","False","None","and","or","not","in","is","elif"]);
+const MULTI_OPS = new Set(["==","!=","<=",">=","&&","||","++","--","+=","-=","*=","/=","<<",">>","->","**","//"]);
+const SINGLE_OPS = new Set([..."+-*/%=<>!&|^~?:@"]);
+const DELIMITERS = new Set([..."(){}[];,."]);
+
+function tokenize(source){
+  const tokens = [];
+  let pos=0,line=1,col=1;
+  const cur = ()=> pos<source.length ? source[pos] : null;
+  const peek = ()=> pos+1<source.length ? source[pos+1] : null;
+  const adv = ()=> { if(source[pos]==='\\n'){ line++; col=1 } else col++; pos++; };
+  const add = (type,value,l,c)=> tokens.push({type,value,line:l,column:c});
+
+  while(pos < source.length){
+    // skip spaces/tabs/cr
+    while(cur()!==null && (cur()===' '||cur()==='\\t'||cur()==='\\r')) adv();
+    const ch = cur(); if(ch===null) break;
+
+    if(ch==='\\n'){ adv(); continue; }
+
+    if(ch==='#'){
+      const sl=line, sc=col; let d='';
+      while(cur()!==null && cur()!=='\\n'){ d+=cur(); adv(); }
+      add('PREPROCESSOR', d, sl, sc); continue;
+    }
+
+    if(ch==='/' && peek()==='/'){
+      const sl=line, sc=col; let cmt='';
+      while(cur()!==null && cur()!=='\\n'){ cmt+=cur(); adv(); }
+      add('COMMENT', cmt, sl, sc); continue;
+    }
+    if(ch==='/' && peek()==='*'){
+      const sl=line, sc=col; let cmt='/*';
+      adv(); adv();
+      while(cur()!==null){
+        if(cur()==='*' && peek()==='/'){ cmt+='*/'; adv(); adv(); break; }
+        cmt+=cur(); adv();
+      }
+      add('COMMENT', cmt, sl, sc); continue;
+    }
+
+    if(ch>='0' && ch<='9'){
+      const sl=line, sc=col; let n='', isF=false;
+      while(cur()!==null && ((cur()>='0'&&cur()<='9')||cur()==='.')){
+        if(cur()==='.' ){ if(isF) break; isF=true; }
+        n+=cur(); adv();
+      }
+      add(isF ? 'FLOAT' : 'INTEGER', n, sl, sc); continue;
+    }
+
+    if((ch>='a'&&ch<='z') || (ch>='A'&&ch<='Z') || ch==='_'){
+      const sl=line, sc=col; let w='';
+      while(cur()!==null && /[a-zA-Z0-9_]/.test(cur())) { w+=cur(); adv(); }
+      add(KEYWORDS.has(w) ? 'KEYWORD' : 'IDENTIFIER', w, sl, sc); continue;
+    }
+
+    if(ch==='"' || ch==="'"){
+      const sl=line, sc=col, q=ch; let s=q; adv();
+      while(cur()!==null && cur()!==q){
+        if(cur()==='\\') { s+=cur(); adv(); }
+        if(cur()!==null){ s+=cur(); adv(); }
+      }
+      if(cur()===q){ s+=cur(); adv(); }
+      add('STRING', s, sl, sc); continue;
+    }
+
+    if(peek()!==null && MULTI_OPS.has(ch + peek())){
+      add('OPERATOR', ch + peek(), line, col); adv(); adv(); continue;
+    }
+
+    if(SINGLE_OPS.has(ch)){
+      add('OPERATOR', ch, line, col); adv(); continue;
+    }
+
+    if(DELIMITERS.has(ch)){
+      add('DELIMITER', ch, line, col); adv(); continue;
+    }
+
+    add('UNKNOWN', ch, line, col); adv();
+  }
+  return tokens;
+}
+
+// render helpers
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function render(tokens){
+  const tbody = document.getElementById('tbody');
+  const summary = document.getElementById('summary');
+  tbody.innerHTML=''; summary.innerHTML='';
+
+  if(tokens.length===0){
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">No tokens found.</td></tr>';
+    return;
+  }
+
+  const counts = {};
+  tokens.forEach(t => counts[t.type] = (counts[t.type]||0) + 1);
+  Object.entries(counts).sort().forEach(([type,cnt])=>{
+    const s = document.createElement('span');
+    s.className = 'badge ' + type;
+    s.textContent = `${type}: ${cnt}`;
+    summary.appendChild(s);
+  });
+
+  tokens.forEach((t,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="color:var(--muted)">${i+1}</td>
+                    <td class="type">${esc(t.type)}</td>
+                    <td class="val">${esc(t.value)}</td>
+                    <td>${t.line}</td><td>${t.column}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// events
+document.getElementById('run').addEventListener('click', ()=>{
+  const code = document.getElementById('code').value;
+  const status = document.getElementById('status');
+  status.textContent = 'Tokenizing…';
+  try {
+    const tokens = tokenize(code);
+    render(tokens);
+    status.textContent = `Done — ${tokens.length} tokens`;
+  } catch(e){
+    status.textContent = 'Error: ' + e.message;
+  }
+});
+
+document.getElementById('clear').addEventListener('click', ()=>{
+  document.getElementById('code').value = '';
+  document.getElementById('status').textContent = 'Ready';
+  document.getElementById('summary').innerHTML = '';
+  document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="empty">Click <strong>Tokenize</strong> to analyze code.</td></tr>';
+});
+</script>
+</body>
+</html>
