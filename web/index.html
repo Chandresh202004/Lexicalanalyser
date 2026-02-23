@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lexer (no AI)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1e293b;
+      --accent: #38bdf8;
+      --accent-2: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: #1f2937;
+      --shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.08), transparent 25%),
+                  radial-gradient(circle at 80% 0%, rgba(56,189,248,0.08), transparent 25%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(34,211,238,0.15), rgba(56,189,248,0.12));
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      border: 1px solid rgba(56,189,248,0.2);
+    }
+    h1 {
+      margin: 12px 0 4px;
+      font-size: 28px;
+      letter-spacing: -0.3px;
+    }
+    p.sub {
+      margin: 0;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    @media (min-width: 900px) {
+      .grid {
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+                  var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      backdrop-filter: blur(6px);
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.1px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 280px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: #e2e8f0;
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, monospace;
+      font-size: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border 0.15s, box-shadow 0.15s;
+    }
+    textarea:focus {
+      border-color: rgba(56,189,248,0.8);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 12px 0 4px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #0b1220;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      box-shadow: 0 12px 24px rgba(56,189,248,0.25);
+    }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    thead { background: #0d1526; }
+    th, td {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #e2e8f0;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    th { color: #cbd5e1; font-weight: 700; }
+    tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+    tbody tr:hover { background: rgba(56,189,248,0.06); }
+    code.inline {
+      background: rgba(148,163,184,0.15);
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #e2e8f0;
+    }
+    footer {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="pill">Lexer • Tokenizer • No AI</div>
+      <h1>Code Lexer Playground</h1>
+      <p class="sub">Paste code, tokenize instantly, and inspect tokens in a clean table.</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <label for="code">Source Code</label>
+        <textarea id="code" spellcheck="false">#include &lt;stdio.h&gt;
+
+int main() {
+    int x = 10;
+    float pi = 3.14;
+    char *msg = "Hello, World!";
+    if (x >= 5 && pi != 0) {
+        printf("%s\n", msg);
+        x++;
+    }
+    /* Multi-line
+       comment */
+    return 0;
+}</textarea>
+        <div class="controls">
+          <button id="run">Tokenize</button>
+          <span class="status" id="status">Ready</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <label>Tokens</label>
+        <table id="tokens-table">
+          <thead>
+            <tr><th>#</th><th>Type</th><th>Value</th><th>Line</th><th>Column</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>
+      <span>Name: Chandresh G U</span>
+      <span>Registration Number: RA2311003050021</span>
+    </footer>
+  </div>
+
+  <script>
+    const runBtn = document.getElementById('run');
+    const statusEl = document.getElementById('status');
+    const tableBody = document.querySelector('#tokens-table tbody');
+    const codeArea = document.getElementById('code');
+
+    async function tokenize() {
+      const code = codeArea.value;
+      statusEl.textContent = 'Tokenizing...';
+      tableBody.innerHTML = '';
+      try {
+        const res = await fetch('/api/lex', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ code })
+        });
+        if (!res.ok) throw new Error('Request failed: ' + res.status);
+        const tokens = await res.json();
+        tokens.forEach((t, i) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${i + 1}</td>
+            <td>${t.type}</td>
+            <td>${t.value.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+            <td>${t.line}</td>
+            <td>${t.column}</td>
+          `;
+          tableBody.appendChild(tr);
+        });
+        statusEl.textContent = `Done. ${tokens.length} tokens.`;
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    runBtn.addEventListener('click', tokenize);
+  </script>
+</body>
+</html>
