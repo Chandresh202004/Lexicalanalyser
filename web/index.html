@@ -2,250 +2,411 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Lexer (no AI)</title>
+  <title>Lexical Analyzer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
       --bg: #0f172a;
-      --panel: #111827;
       --card: #1e293b;
+      --border: #1f2937;
       --accent: #38bdf8;
-      --accent-2: #22d3ee;
+      --accent2: #22d3ee;
       --text: #e5e7eb;
       --muted: #94a3b8;
-      --border: #1f2937;
-      --shadow: 0 12px 40px rgba(0,0,0,0.35);
+      --shadow: 0 12px 40px rgba(0,0,0,0.4);
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
-      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.08), transparent 25%),
-                  radial-gradient(circle at 80% 0%, rgba(56,189,248,0.08), transparent 25%),
-                  var(--bg);
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(34,211,238,0.08), transparent 30%),
+        radial-gradient(circle at 85% 5%,  rgba(56,189,248,0.07), transparent 30%),
+        var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 24px;
+      padding: 28px 16px 40px;
     }
-    .page {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+    .page { max-width: 1150px; margin: 0 auto; }
+
+    /* ── HEADER ── */
+    header { text-align: center; margin-bottom: 28px; }
     .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, rgba(34,211,238,0.15), rgba(56,189,248,0.12));
-      color: var(--accent);
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      border: 1px solid rgba(56,189,248,0.2);
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 16px; border-radius: 999px;
+      background: linear-gradient(90deg,rgba(34,211,238,.14),rgba(56,189,248,.1));
+      color: var(--accent); font-weight: 600; font-size: 13px;
+      border: 1px solid rgba(56,189,248,.22); margin-bottom: 12px;
     }
-    h1 {
-      margin: 12px 0 4px;
-      font-size: 28px;
-      letter-spacing: -0.3px;
-    }
-    p.sub {
-      margin: 0;
-      color: var(--muted);
-    }
+    h1 { font-size: 30px; letter-spacing: -.4px; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: 14px; }
+
+    /* ── GRID ── */
     .grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 18px;
     }
-    @media (min-width: 900px) {
-      .grid {
-        grid-template-columns: 1.15fr 0.85fr;
-      }
+    @media(min-width:860px){
+      .grid { grid-template-columns: 1.1fr .9fr; }
     }
+
+    /* ── CARD ── */
     .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+      background: linear-gradient(160deg,rgba(255,255,255,.025),rgba(255,255,255,0)),
                   var(--card);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 18px;
       box-shadow: var(--shadow);
-      padding: 16px;
-      backdrop-filter: blur(6px);
+      padding: 20px;
     }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: 0.1px;
+    .card-title {
+      font-size: 13px; font-weight: 700; color: var(--accent);
+      letter-spacing: .8px; text-transform: uppercase; margin-bottom: 12px;
     }
+
+    /* ── TEXTAREA ── */
     textarea {
-      width: 100%;
-      min-height: 280px;
-      padding: 14px;
-      border-radius: 12px;
+      width: 100%; min-height: 280px;
+      padding: 14px; border-radius: 12px;
       border: 1px solid var(--border);
-      background: #0b1220;
-      color: #e2e8f0;
-      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, monospace;
-      font-size: 14px;
-      resize: vertical;
-      outline: none;
-      transition: border 0.15s, box-shadow 0.15s;
+      background: #080f1e; color: #e2e8f0;
+      font-family: "JetBrains Mono","Fira Code",ui-monospace,monospace;
+      font-size: 13px; resize: vertical; outline: none;
+      transition: border .15s, box-shadow .15s;
+      line-height: 1.6;
     }
     textarea:focus {
-      border-color: rgba(56,189,248,0.8);
-      box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+      border-color: rgba(56,189,248,.7);
+      box-shadow: 0 0 0 3px rgba(56,189,248,.12);
     }
-    .controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin: 12px 0 4px;
-      flex-wrap: wrap;
+
+    /* ── CONTROLS ── */
+    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+    .btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #071524; border: none; border-radius: 10px;
+      padding: 10px 22px; font-weight: 700; font-size: 14px;
+      cursor: pointer; transition: transform .12s, box-shadow .12s;
+      box-shadow: 0 8px 22px rgba(56,189,248,.28);
     }
-    button {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #0b1220;
-      border: none;
-      border-radius: 12px;
-      padding: 10px 18px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.12s ease;
-      box-shadow: 0 12px 24px rgba(56,189,248,0.25);
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(56,189,248,.35); }
+    .btn:active { transform: translateY(0); }
+    .btn-clear {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 10px;
+      padding: 10px 16px; font-size: 14px; cursor: pointer;
+      transition: border .12s, color .12s;
     }
-    button:hover { transform: translateY(-1px); }
-    button:active { transform: translateY(0); }
-    .status {
-      color: var(--muted);
-      font-size: 13px;
+    .btn-clear:hover { border-color: var(--accent); color: var(--accent); }
+    .status { font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+    /* ── SUMMARY BADGES ── */
+    .summary {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border);
+    .badge {
+      padding: 4px 10px; border-radius: 999px; font-size: 12px;
+      font-weight: 600; border: 1px solid transparent; cursor: default;
     }
-    thead { background: #0d1526; }
-    th, td {
-      padding: 10px 12px;
-      font-size: 13px;
-      color: #e2e8f0;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
+    .badge.KEYWORD    { background:rgba(251,191, 36,.12); color:#fbbf24; border-color:rgba(251,191,36,.25); }
+    .badge.IDENTIFIER { background:rgba( 56,189,248,.12); color:#38bdf8; border-color:rgba(56,189,248,.25); }
+    .badge.INTEGER    { background:rgba(167,243,208,.10); color:#6ee7b7; border-color:rgba(167,243,208,.25); }
+    .badge.FLOAT      { background:rgba(167,243,208,.10); color:#6ee7b7; border-color:rgba(167,243,208,.25); }
+    .badge.STRING     { background:rgba(251,146,  0,.10); color:#fb923c; border-color:rgba(251,146,0,.25); }
+    .badge.OPERATOR   { background:rgba(199,210,254,.10); color:#a5b4fc; border-color:rgba(199,210,254,.25); }
+    .badge.DELIMITER  { background:rgba(244,114,182,.10); color:#f472b6; border-color:rgba(244,114,182,.25); }
+    .badge.COMMENT    { background:rgba(148,163,184,.10); color:#94a3b8; border-color:rgba(148,163,184,.25); }
+    .badge.PREPROCESSOR{ background:rgba(52,211,153,.10); color:#34d399; border-color:rgba(52,211,153,.25); }
+    .badge.UNKNOWN    { background:rgba(239, 68, 68,.10); color:#f87171; border-color:rgba(239,68,68,.25); }
+
+    /* ── TABLE ── */
+    .table-wrap { max-height: 440px; overflow-y: auto; border-radius: 12px; border: 1px solid var(--border); }
+    .table-wrap::-webkit-scrollbar { width: 6px; }
+    .table-wrap::-webkit-scrollbar-track { background: transparent; }
+    .table-wrap::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { position: sticky; top: 0; background: #0a0f1e; z-index: 1; }
+    th, td { padding: 9px 12px; font-size: 12.5px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+    tbody tr:hover { background: rgba(56,189,248,.05); }
+    td.type-cell { font-weight: 700; }
+    td.type-KEYWORD    { color:#fbbf24; }
+    td.type-IDENTIFIER { color:#38bdf8; }
+    td.type-INTEGER,
+    td.type-FLOAT      { color:#6ee7b7; }
+    td.type-STRING     { color:#fb923c; }
+    td.type-OPERATOR   { color:#a5b4fc; }
+    td.type-DELIMITER  { color:#f472b6; }
+    td.type-COMMENT    { color:#94a3b8; }
+    td.type-PREPROCESSOR{ color:#34d399; }
+    td.type-UNKNOWN    { color:#f87171; }
+    td.val-cell {
+      font-family: "JetBrains Mono","Fira Code",monospace; font-size: 12px; color: #cbd5e1;
     }
-    th { color: #cbd5e1; font-weight: 700; }
-    tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
-    tbody tr:hover { background: rgba(56,189,248,0.06); }
-    code.inline {
-      background: rgba(148,163,184,0.15);
-      padding: 2px 6px;
-      border-radius: 6px;
-      color: #e2e8f0;
+    td.loc-cell { color: var(--muted); font-size: 12px; }
+    .empty-state {
+      text-align: center; padding: 50px 20px;
+      color: var(--muted); font-size: 13px;
     }
+    .empty-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+
+    /* ── FOOTER ── */
     footer {
-      margin-top: 18px;
-      font-size: 13px;
-      color: var(--muted);
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding-top: 10px;
+      margin-top: 28px; padding-top: 16px;
       border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px;
+      font-size: 13px; color: var(--muted);
     }
+    footer span strong { color: var(--text); }
   </style>
 </head>
 <body>
-  <div class="page">
-    <header>
-      <div class="pill">Lexer • Tokenizer • No AI</div>
-      <h1>Code Lexer Playground</h1>
-      <p class="sub">Paste code, tokenize instantly, and inspect tokens in a clean table.</p>
-    </header>
+<div class="page">
 
-    <div class="grid">
-      <div class="card">
-        <label for="code">Source Code</label>
-        <textarea id="code" spellcheck="false">#include &lt;stdio.h&gt;
+  <!-- HEADER -->
+  <header>
+    <div class="pill">⚙ Lexical Analyzer • No AI</div>
+    <h1>Code Lexer Playground</h1>
+    <p class="sub">Paste any C / Python snippet and instantly see every token it produces.</p>
+  </header>
 
+  <!-- GRID -->
+  <div class="grid">
+
+    <!-- LEFT: Editor -->
+    <div class="card">
+      <div class="card-title">Source Code</div>
+      <textarea id="code" spellcheck="false">#include &lt;stdio.h&gt;
+
+// Sample C program
 int main() {
     int x = 10;
     float pi = 3.14;
     char *msg = "Hello, World!";
+
     if (x >= 5 && pi != 0) {
         printf("%s\n", msg);
         x++;
     }
+
     /* Multi-line
        comment */
     return 0;
 }</textarea>
-        <div class="controls">
-          <button id="run">Tokenize</button>
-          <span class="status" id="status">Ready</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <label>Tokens</label>
-        <table id="tokens-table">
-          <thead>
-            <tr><th>#</th><th>Type</th><th>Value</th><th>Line</th><th>Column</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="controls">
+        <button class="btn" id="run">⚡ Tokenize</button>
+        <button class="btn-clear" id="clear">Clear</button>
+        <span class="status" id="status">Ready</span>
       </div>
     </div>
 
-    <footer>
-      <span>Name: Chandresh G U</span>
-      <span>Registration Number: RA2311003050021</span>
-    </footer>
+    <!-- RIGHT: Output -->
+    <div class="card">
+      <div class="card-title">Token Output</div>
+      <div class="summary" id="summary"></div>
+      <div class="table-wrap">
+        <table id="tokens-table">
+          <thead>
+            <tr><th>#</th><th>Type</th><th>Value</th><th>Ln</th><th>Col</th></tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="5">
+              <div class="empty-state">
+                <span class="empty-icon">🔍</span>
+                Click <strong>Tokenize</strong> to analyze code.
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <script>
-    const runBtn = document.getElementById('run');
-    const statusEl = document.getElementById('status');
-    const tableBody = document.querySelector('#tokens-table tbody');
-    const codeArea = document.getElementById('code');
+  <!-- FOOTER -->
+  <footer>
+    <span>Name: <strong>Chandresh G U</strong></span>
+    <span>Registration Number: <strong>RA2311003050021</strong></span>
+  </footer>
+</div>
 
-    async function tokenize() {
-      const code = codeArea.value;
-      statusEl.textContent = 'Tokenizing...';
-      tableBody.innerHTML = '';
-      try {
-        const res = await fetch('/api/lex', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ code })
-        });
-        if (!res.ok) throw new Error('Request failed: ' + res.status);
-        const tokens = await res.json();
-        tokens.forEach((t, i) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${i + 1}</td>
-            <td>${t.type}</td>
-            <td>${t.value.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-            <td>${t.line}</td>
-            <td>${t.column}</td>
-          `;
-          tableBody.appendChild(tr);
-        });
-        statusEl.textContent = `Done. ${tokens.length} tokens.`;
-      } catch (err) {
-        statusEl.textContent = 'Error: ' + err.message;
-      }
+<script>
+// ==================== TOKEN TYPES ====================
+const KEYWORDS = new Set([
+  "auto","break","case","char","const","continue","default","do",
+  "double","else","enum","extern","float","for","goto","if",
+  "int","long","register","return","short","signed","sizeof","static",
+  "struct","switch","typedef","union","unsigned","void","volatile","while",
+  "print","input","def","class","import","from","as","try","except",
+  "finally","raise","with","yield","lambda","pass","True","False","None",
+  "and","or","not","in","is","elif"
+]);
+
+const MULTI_OPS = new Set([
+  "==","!=","<=",">=","&&","||","++","--",
+  "+=","-=","*=","/=","<<",">>","->","**","//"
+]);
+const SINGLE_OPS = new Set([..."+-*/%=<>!&|^~?:@"]);
+const DELIMITERS  = new Set([..."(){}[];,."]);
+
+// ==================== LEXER ====================
+function tokenize(source) {
+  const tokens = [];
+  let pos = 0, line = 1, col = 1;
+
+  const cur  = () => pos < source.length ? source[pos] : null;
+  const peek = () => pos + 1 < source.length ? source[pos + 1] : null;
+  const adv  = () => {
+    if (source[pos] === '\n') { line++; col = 1; }
+    else col++;
+    pos++;
+  };
+  const add = (type, value, l, c) => tokens.push({ type, value, line: l, column: c });
+
+  while (pos < source.length) {
+    // skip spaces/tabs/CR
+    while (cur() !== null && (cur() === ' ' || cur() === '\t' || cur() === '\r')) adv();
+    const ch = cur();
+    if (ch === null) break;
+
+    // newline
+    if (ch === '\n') { adv(); continue; }
+
+    // preprocessor
+    if (ch === '#') {
+      const sl = line, sc = col; let d = '';
+      while (cur() !== null && cur() !== '\n') { d += cur(); adv(); }
+      add('PREPROCESSOR', d, sl, sc); continue;
     }
 
-    runBtn.addEventListener('click', tokenize);
-  </script>
+    // // comment
+    if (ch === '/' && peek() === '/') {
+      const sl = line, sc = col; let c2 = '';
+      while (cur() !== null && cur() !== '\n') { c2 += cur(); adv(); }
+      add('COMMENT', c2, sl, sc); continue;
+    }
+    // /* comment */
+    if (ch === '/' && peek() === '*') {
+      const sl = line, sc = col; let c2 = '/*';
+      adv(); adv();
+      while (cur() !== null) {
+        if (cur() === '*' && peek() === '/') { c2 += '*/'; adv(); adv(); break; }
+        c2 += cur(); adv();
+      }
+      add('COMMENT', c2, sl, sc); continue;
+    }
+
+    // number
+    if (ch >= '0' && ch <= '9') {
+      const sl = line, sc = col; let n = ''; let isF = false;
+      while (cur() !== null && (cur() >= '0' && cur() <= '9' || cur() === '.')) {
+        if (cur() === '.') { if (isF) break; isF = true; }
+        n += cur(); adv();
+      }
+      add(isF ? 'FLOAT' : 'INTEGER', n, sl, sc); continue;
+    }
+
+    // identifier / keyword
+    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_') {
+      const sl = line, sc = col; let w = '';
+      while (cur() !== null && (/[a-zA-Z0-9_]/.test(cur()))) { w += cur(); adv(); }
+      add(KEYWORDS.has(w) ? 'KEYWORD' : 'IDENTIFIER', w, sl, sc); continue;
+    }
+
+    // string
+    if (ch === '"' || ch === "'") {
+      const sl = line, sc = col, q = ch; let s = q; adv();
+      while (cur() !== null && cur() !== q) {
+        if (cur() === '\\') { s += cur(); adv(); }
+        if (cur() !== null) { s += cur(); adv(); }
+      }
+      if (cur() === q) { s += cur(); adv(); }
+      add('STRING', s, sl, sc); continue;
+    }
+
+    // multi-char operator
+    if (peek() !== null && MULTI_OPS.has(ch + peek())) {
+      add('OPERATOR', ch + peek(), line, col); adv(); adv(); continue;
+    }
+
+    // single-char operator
+    if (SINGLE_OPS.has(ch)) {
+      add('OPERATOR', ch, line, col); adv(); continue;
+    }
+
+    // delimiter
+    if (DELIMITERS.has(ch)) {
+      add('DELIMITER', ch, line, col); adv(); continue;
+    }
+
+    // unknown
+    add('UNKNOWN', ch, line, col); adv();
+  }
+  return tokens;
+}
+
+// ==================== RENDER ====================
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function render(tokens) {
+  const tbody = document.getElementById('tbody');
+  const summary = document.getElementById('summary');
+  tbody.innerHTML = '';
+  summary.innerHTML = '';
+
+  if (!tokens.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">🔍</span>No tokens found.</div></td></tr>`;
+    return;
+  }
+
+  // count by type
+  const counts = {};
+  tokens.forEach(t => counts[t.type] = (counts[t.type] || 0) + 1);
+
+  // badges
+  Object.entries(counts).sort().forEach(([type, cnt]) => {
+    const b = document.createElement('span');
+    b.className = `badge ${type}`;
+    b.textContent = `${type}: ${cnt}`;
+    summary.appendChild(b);
+  });
+
+  // rows
+  tokens.forEach((t, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-size:12px">${i + 1}</td>
+      <td class="type-cell type-${t.type}">${esc(t.type)}</td>
+      <td class="val-cell">${esc(t.value)}</td>
+      <td class="loc-cell">${t.line}</td>
+      <td class="loc-cell">${t.column}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ==================== EVENTS ====================
+document.getElementById('run').addEventListener('click', () => {
+  const code = document.getElementById('code').value;
+  const status = document.getElementById('status');
+  status.textContent = 'Tokenizing…';
+  try {
+    const tokens = tokenize(code);
+    render(tokens);
+    status.textContent = `Done — ${tokens.length} tokens`;
+  } catch(e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  document.getElementById('code').value = '';
+  document.getElementById('status').textContent = 'Ready';
+  document.getElementById('summary').innerHTML = '';
+  document.getElementById('tbody').innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">🔍</span>Click <strong>Tokenize</strong> to analyze code.</div></td></tr>`;
+});
+</script>
 </body>
 </html>
